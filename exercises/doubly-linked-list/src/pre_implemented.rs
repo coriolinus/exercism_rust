@@ -50,7 +50,7 @@ impl<T: Clone> Clone for LinkedList<T> {
 }
 
 // seek methods, return false if end of list is reached prematurely
-impl<T> Cursor<'_, T> {
+impl<T> Cursor<T> {
     pub fn seek_forward(&mut self, n: usize) -> bool {
         (0..n).all(|_| self.next().is_some())
     }

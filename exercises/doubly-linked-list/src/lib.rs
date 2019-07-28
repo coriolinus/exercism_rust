@@ -4,6 +4,9 @@
 mod pre_implemented;
 
 use std::ptr::NonNull;
+use std::mem;
+
+type NNMut<T> = Option<NonNull<*mut Node<T>>>;
 
 struct Node<T> {
     item: T,
@@ -12,10 +15,10 @@ struct Node<T> {
     // for them to change. It doesn't really matter either way; it's possible
     // to cast freely between them.
     /// next steps toward the back of the list
-    next: Option<NonNull<*const Node<T>>>,
+    next: NNMut<T>,
 
     /// prev steps toward the front of the list
-    prev: Option<NonNull<*const Node<T>>>,
+    prev: NNMut<T>,
 }
 
 impl<T> Node<T> {
@@ -28,11 +31,11 @@ impl<T> Node<T> {
 
 pub struct LinkedList<T> {
     // these pointers are mut because we expect them to change relatively frequently
-    front: Option<NonNull<*mut Node<T>>>,
-    back: Option<NonNull<*mut Node<T>>>,
+    front: NNMut<T>,
+    back: NNMut<T>,
 }
 
-pub struct Cursor<'a, T>(std::marker::PhantomData<&'a T>);
+pub struct Cursor<T>(NNMut<T>);
 
 pub struct Iter<'a, T>(std::marker::PhantomData<&'a T>);
 
@@ -50,13 +53,13 @@ impl<T> LinkedList<T> {
     }
 
     /// Return a cursor positioned on the front element
-    pub fn cursor_front(&mut self) -> Cursor<'_, T> {
-        unimplemented!()
+    pub fn cursor_front(&mut self) -> Cursor<T> {
+        Cursor(self.front)
     }
 
     /// Return a cursor positioned on the back element
-    pub fn cursor_back(&mut self) -> Cursor<'_, T> {
-        unimplemented!()
+    pub fn cursor_back(&mut self) -> Cursor<T> {
+        Cursor(self.back)
     }
 
     /// Return an iterator that moves from front to back
@@ -74,7 +77,7 @@ impl<T> Drop for LinkedList<T> {
 
 // the cursor is expected to act as if it is at the position of an element
 // and it also has to work with and be able to insert into an empty list.
-impl<T> Cursor<'_, T> {
+impl<T> Cursor<T> {
     /// Take a mutable reference to the current element
     pub fn peek_mut(&mut self) -> Option<&mut T> {
         unimplemented!()
@@ -96,7 +99,24 @@ impl<T> Cursor<'_, T> {
     /// to the neighboring element that's closest to the back. This can be
     /// either the next or previous position.
     pub fn take(&mut self) -> Option<T> {
-        unimplemented!()
+        let mut rv = None;
+        let mut next = None;
+        if let Cursor(Some(nodep)) = self {
+            // select next
+            unsafe {
+                let node = &mut (**nodep.as_ptr());
+                if node.next.is_some() {
+                    next = node.next;
+                } else if node.prev.is_some() {
+                    next = node.prev;
+                }
+                // get return value
+                rv = Some(mem::replace(&mut node.item, mem::uninitialized()));
+            }
+            // update self
+            self.0 = next;
+        }
+        rv
     }
 
     pub fn insert_after(&mut self, _element: T) {
