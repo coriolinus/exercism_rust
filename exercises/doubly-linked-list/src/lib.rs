@@ -3,19 +3,50 @@
 // You are free to use anything in it, but it's mainly for the test framework.
 mod pre_implemented;
 
-pub struct LinkedList<T>(std::marker::PhantomData<T>);
+use std::ptr::NonNull;
 
-pub struct Cursor<'a, T>(std::marker::PhantomData<&'a mut T>);
+struct Node<T> {
+    item: T,
+
+    // the pointers below are const because we expect it to be relatively rare
+    // for them to change. It doesn't really matter either way; it's possible
+    // to cast freely between them.
+    /// next steps toward the back of the list
+    next: Option<NonNull<*const Node<T>>>,
+
+    /// prev steps toward the front of the list
+    prev: Option<NonNull<*const Node<T>>>,
+}
+
+impl<T> Node<T> {
+    fn len(&self) -> usize {
+        1 + self
+            .next
+            .map_or(0, |next| unsafe { (**next.as_ref()).len() })
+    }
+}
+
+pub struct LinkedList<T> {
+    // these pointers are mut because we expect them to change relatively frequently
+    front: Option<NonNull<*mut Node<T>>>,
+    back: Option<NonNull<*mut Node<T>>>,
+}
+
+pub struct Cursor<'a, T>(std::marker::PhantomData<&'a T>);
 
 pub struct Iter<'a, T>(std::marker::PhantomData<&'a T>);
 
 impl<T> LinkedList<T> {
     pub fn new() -> Self {
-        unimplemented!()
+        LinkedList {
+            front: None,
+            back: None,
+        }
     }
 
     pub fn len(&self) -> usize {
-        unimplemented!()
+        self.front
+            .map_or(0, |node| unsafe { (**node.as_ref()).len() })
     }
 
     /// Return a cursor positioned on the front element
@@ -36,7 +67,8 @@ impl<T> LinkedList<T> {
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
-        unimplemented!()
+        // basically the same as in the stdlib implementation of drop
+        while let Some(_) = self.pop_front() {}
     }
 }
 
