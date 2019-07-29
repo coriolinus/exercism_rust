@@ -97,15 +97,25 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
         Cursor { ll, ptr }
     }
 
+    pub fn peek<'a>(&'a self) -> Option<&'a T> {
+        self.ptr
+            .map(|raw_ptr| &Box::leak(unsafe { Box::from_raw(raw_ptr.as_ptr()) }).item)
+    }
+
     /// Take a mutable reference to the current element
-    pub fn peek_mut(&mut self) -> Option<&mut T> {
-        unimplemented!()
+    pub fn peek_mut<'a>(&'a mut self) -> Option<&'a mut T> {
+        self.ptr
+            .map(|raw_ptr| &mut Box::leak(unsafe { Box::from_raw(raw_ptr.as_ptr()) }).item)
     }
 
     /// Move one position forward (towards the back) and
     /// return a reference to the new position
-    pub fn next(&mut self) -> Option<&mut T> {
-        unimplemented!()
+    pub fn next<'a>(&'a mut self) -> Option<&'a mut T> {
+        self.ptr = match self.ptr {
+            None => None,
+            Some(raw_ptr) => unsafe { (*raw_ptr.as_ptr()).next },
+        };
+        self.peek_mut()
     }
 
     /// Move one position backward (towards the front) and
@@ -205,7 +215,7 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
     }
 }
 
-pub struct Iter<'a, T>(std::marker::PhantomData<&'a T>);
+pub struct Iter<'a, T: std::fmt::Debug>(Cursor<'a, T>);
 
 impl<'a, T: std::fmt::Debug> Iterator for Iter<'a, T> {
     type Item = &'a T;

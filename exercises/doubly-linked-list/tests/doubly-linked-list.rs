@@ -81,7 +81,6 @@ fn basics_push_back_pop_front() {
 // ———————————————————————————————————————————————————————————
 
 #[test]
-#[ignore]
 fn iter() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for num in 0..10 {
