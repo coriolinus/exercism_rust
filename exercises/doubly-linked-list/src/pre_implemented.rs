@@ -4,7 +4,7 @@
 //! We supply them to reduce work both for you and the mentors.
 use crate::{Cursor, LinkedList};
 
-impl<T> LinkedList<T> {
+impl<T: std::fmt::Debug> LinkedList<T> {
     pub fn push_back(&mut self, element: T) {
         self.cursor_back().insert_after(element);
     }
@@ -30,7 +30,7 @@ impl<T> LinkedList<T> {
     }
 }
 
-impl<T> std::iter::FromIterator<T> for LinkedList<T> {
+impl<T: std::fmt::Debug> std::iter::FromIterator<T> for LinkedList<T> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = T>,
@@ -43,14 +43,14 @@ impl<T> std::iter::FromIterator<T> for LinkedList<T> {
     }
 }
 
-impl<T: Clone> Clone for LinkedList<T> {
+impl<T: Clone + std::fmt::Debug> Clone for LinkedList<T> {
     fn clone(&self) -> Self {
         self.iter().cloned().collect()
     }
 }
 
 // seek methods, return false if end of list is reached prematurely
-impl<T> Cursor<T> {
+impl<T: std::fmt::Debug> Cursor<'_, T> {
     pub fn seek_forward(&mut self, n: usize) -> bool {
         (0..n).all(|_| self.next().is_some())
     }

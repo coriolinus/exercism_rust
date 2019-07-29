@@ -2,6 +2,7 @@ use doubly_linked_list::*;
 
 #[test]
 fn is_generic() {
+    #[derive(Debug)]
     struct Foo;
     LinkedList::<Foo>::new();
 }
@@ -11,19 +12,18 @@ fn is_generic() {
 // ———————————————————————————————————————————————————————————
 
 #[test]
-#[ignore]
 fn basics_empty_list() {
     let list: LinkedList<i32> = LinkedList::new();
     assert_eq!(list.len(), 0);
 }
 
 #[test]
-#[ignore]
 fn basics_single_element() {
     let mut list: LinkedList<i32> = LinkedList::new();
     list.push_back(5);
 
     assert_eq!(list.len(), 1);
+    dbg!(&list);
     assert_eq!(list.pop_front(), Some(5));
 }
 
@@ -215,6 +215,7 @@ fn cursor_take() {
 #[ignore]
 fn drop_no_double_frees() {
     use std::cell::Cell;
+    #[derive(Debug)]
     struct DropCounter<'a>(&'a Cell<usize>);
 
     impl<'a> Drop for DropCounter<'a> {
