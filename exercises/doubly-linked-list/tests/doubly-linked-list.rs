@@ -41,7 +41,6 @@ fn basics_push_pop_at_back() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_pop_at_front() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
@@ -56,7 +55,6 @@ fn basics_push_pop_at_front() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_front_pop_back() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
@@ -68,7 +66,6 @@ fn basics_push_front_pop_back() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_back_pop_front() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
