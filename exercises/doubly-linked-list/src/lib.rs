@@ -3,7 +3,6 @@
 // You are free to use anything in it, but it's mainly for the test framework.
 mod pre_implemented;
 
-use std::mem;
 use std::ptr::NonNull;
 
 type NNMut<T> = Option<NonNull<Node<T>>>;
@@ -31,15 +30,15 @@ impl<T: std::fmt::Debug> Node<T> {
         }
     }
 
-    fn len(&self) -> usize {
-        dbg!(self);
-        1 + self.next.map_or(0, |next| unsafe { next.as_ref().len() })
+    unsafe fn into_ptr(self) -> NNMut<T> {
+        let heaped = Box::new(self);
+        let ptr = Box::into_raw(heaped);
+        assert!(ptr != std::ptr::null_mut());
+        NonNull::new(ptr)
     }
-}
 
-impl<T: std::fmt::Debug> Drop for Node<T> {
-    fn drop(&mut self) {
-        dbg!("Drop!");
+    fn len(&self) -> usize {
+        1 + self.next.map_or(0, |next| unsafe { next.as_ref().len() })
     }
 }
 
@@ -59,9 +58,7 @@ impl<T: std::fmt::Debug> LinkedList<T> {
     }
 
     pub fn len(&self) -> usize {
-        dbg!(self);
-        self.front
-            .map_or(0, |node| unsafe { dbg!(node.as_ref()).len() })
+        self.front.map_or(0, |node| unsafe { node.as_ref().len() })
     }
 
     /// Return a cursor positioned on the front element
@@ -121,21 +118,17 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
     /// to the neighboring element that's closest to the back. This can be
     /// either the next or previous position.
     pub fn take(&mut self) -> Option<T> {
-        dbg!(&self, unsafe{self.ptr.unwrap().as_ref()});
         let mut rv = None;
         let mut next = None;
-        if let Some(mut nodep) = self.ptr {
+        if let Some(node) = self.ptr {
             unsafe {
-                dbg!(nodep);
-                let node = nodep.as_mut();
-                dbg!(&node);
+                let node = *Box::from_raw(node.as_ptr());
                 // select next and update pointers
                 if node.next.is_some() {
                     next = node.next;
                 } else if node.prev.is_some() {
                     next = node.prev;
                 }
-                dbg!(next);
                 // update external pointers
                 if let Some(nnext) = node.next {
                     (*nnext.as_ptr()).prev = node.prev;
@@ -149,17 +142,17 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
                 }
 
                 // get return value
-                rv = Some(mem::replace(&mut node.item, mem::uninitialized()));
+                rv = Some(node.item);
             }
             // update self
             self.ptr = next;
         }
+
         rv
     }
 
     pub fn insert_after(&mut self, element: T) {
-        let mut new_node = Node::new(element);
-        let new_node_ptr: NNMut<T> = NonNull::new(&mut new_node as *mut Node<T>);
+        let new_node_ptr = unsafe { Node::new(element).into_ptr() };
         assert!(new_node_ptr.is_some());
         self.ptr = match self.ptr {
             None => {
@@ -184,12 +177,10 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
         assert!(self.ll.front.is_some());
         assert!(self.ll.back.is_some());
         assert!(self.ptr.is_some());
-        dbg!(&self, unsafe{self.ptr.unwrap().as_ref()});
     }
 
     pub fn insert_before(&mut self, element: T) {
-        let mut new_node = Node::new(element);
-        let new_node_ptr: NNMut<T> = NonNull::new(&mut new_node as *mut Node<T>);
+        let new_node_ptr = unsafe { Node::new(element).into_ptr() };
         self.ptr = match self.ptr {
             None => {
                 self.ll.front = new_node_ptr;

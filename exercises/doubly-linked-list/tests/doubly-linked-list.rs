@@ -23,7 +23,6 @@ fn basics_single_element() {
     list.push_back(5);
 
     assert_eq!(list.len(), 1);
-    dbg!(&list);
     assert_eq!(list.pop_front(), Some(5));
 }
 
