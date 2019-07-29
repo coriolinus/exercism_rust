@@ -27,7 +27,6 @@ fn basics_single_element() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_pop_at_back() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {

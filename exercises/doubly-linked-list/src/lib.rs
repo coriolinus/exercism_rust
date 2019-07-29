@@ -33,7 +33,7 @@ impl<T: std::fmt::Debug> Node<T> {
     unsafe fn into_ptr(self) -> NNMut<T> {
         let heaped = Box::new(self);
         let ptr = Box::into_raw(heaped);
-        assert!(ptr != std::ptr::null_mut());
+        debug_assert!(ptr != std::ptr::null_mut());
         NonNull::new(ptr)
     }
 
@@ -147,13 +147,12 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
             // update self
             self.ptr = next;
         }
-
         rv
     }
 
     pub fn insert_after(&mut self, element: T) {
         let new_node_ptr = unsafe { Node::new(element).into_ptr() };
-        assert!(new_node_ptr.is_some());
+        debug_assert!(new_node_ptr.is_some());
         self.ptr = match self.ptr {
             None => {
                 self.ll.front = new_node_ptr;
@@ -162,6 +161,7 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
             }
             Some(cur_ptr) => {
                 unsafe {
+                    (*new_node_ptr.unwrap().as_ptr()).prev = Some(cur_ptr);
                     let cur_node = cur_ptr.as_ptr();
                     if let Some(next) = (*cur_node).next {
                         (*next.as_ptr()).prev = new_node_ptr;
@@ -174,9 +174,9 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
                 Some(cur_ptr)
             }
         };
-        assert!(self.ll.front.is_some());
-        assert!(self.ll.back.is_some());
-        assert!(self.ptr.is_some());
+        debug_assert!(self.ll.front.is_some());
+        debug_assert!(self.ll.back.is_some());
+        debug_assert!(self.ptr.is_some());
     }
 
     pub fn insert_before(&mut self, element: T) {
@@ -189,6 +189,7 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
             }
             Some(cur_ptr) => {
                 unsafe {
+                    (*new_node_ptr.unwrap().as_ptr()).next = Some(cur_ptr);
                     let cur_node = cur_ptr.as_ptr();
                     if let Some(prev) = (*cur_node).prev {
                         (*prev.as_ptr()).next = new_node_ptr;
