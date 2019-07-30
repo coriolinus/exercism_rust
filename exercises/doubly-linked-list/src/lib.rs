@@ -95,7 +95,10 @@ impl<T: fmt::Display> fmt::Display for LinkedList<T> {
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
-        // basically the same as in the stdlib implementation of drop
+        // basically the same as in the stdlib implementation of Drop for LinkedList
+        // I had no idea what I was doing when I wrote this, and I had to write
+        // _something_ to get the code to compile, so I figured I'd just crib
+        // off an example while I figured things out.
         while let Some(_) = self.pop_front() {}
     }
 }
@@ -191,7 +194,15 @@ impl<T> Cursor<'_, T> {
         rv
     }
 
-    pub fn insert_after(&mut self, element: T) {
+    /// approach: move a pointer closer to the current pointer
+    /// depart: move a pointer farther away from the current pointer
+    /// list_end: one or the other side of the associated ll, according to
+    fn insert<F1, F2>(&mut self, element: T, approach: F1, depart: F2, list_end: *mut NNMut<T>)
+    where
+        // even though these bounds are identical, no two closures have the same type
+        F1: Fn(*mut Node<T>) -> *mut NNMut<T>,
+        F2: Fn(*mut Node<T>) -> *mut NNMut<T>,
+    {
         let new_node_ptr = unsafe { Node::new(element).into_ptr() };
         debug_assert!(new_node_ptr.is_some());
         self.ptr = match self.ptr {
@@ -204,16 +215,16 @@ impl<T> Cursor<'_, T> {
                 unsafe {
                     let cur_node = cur_ptr.as_ptr();
                     // update both node pointers
-                    (*new_node_ptr.unwrap().as_ptr()).prev = Some(cur_ptr);
-                    (*new_node_ptr.unwrap().as_ptr()).next = (*cur_node).next;
+                    *approach(new_node_ptr.unwrap().as_ptr()) = Some(cur_ptr);
+                    *depart(new_node_ptr.unwrap().as_ptr()) = *depart(cur_node);
                     // update external pointers
-                    if let Some(next) = (*cur_node).next {
-                        (*next.as_ptr()).prev = new_node_ptr;
+                    if let Some(away) = *depart(cur_node) {
+                        *approach(away.as_ptr()) = new_node_ptr;
                     } else {
-                        self.ll.back = new_node_ptr;
+                        *list_end = new_node_ptr;
                     }
                     // update self pointer
-                    (*cur_node).next = new_node_ptr;
+                    *depart(cur_node) = new_node_ptr;
                 }
 
                 Some(cur_ptr)
@@ -224,37 +235,24 @@ impl<T> Cursor<'_, T> {
         debug_assert!(self.ptr.is_some());
     }
 
-    pub fn insert_before(&mut self, element: T) {
-        let new_node_ptr = unsafe { Node::new(element).into_ptr() };
-        debug_assert!(new_node_ptr.is_some());
-        self.ptr = match self.ptr {
-            None => {
-                self.ll.front = new_node_ptr;
-                self.ll.back = new_node_ptr;
-                new_node_ptr
-            }
-            Some(cur_ptr) => {
-                unsafe {
-                    let cur_node = cur_ptr.as_ptr();
-                    // update both node pointers
-                    (*new_node_ptr.unwrap().as_ptr()).next = Some(cur_ptr);
-                    (*new_node_ptr.unwrap().as_ptr()).prev = (*cur_node).prev;
-                    // update external pointers
-                    if let Some(prev) = (*cur_node).prev {
-                        (*prev.as_ptr()).next = new_node_ptr;
-                    } else {
-                        self.ll.front = new_node_ptr;
-                    }
-                    // update self pointer
-                    (*cur_node).prev = new_node_ptr;
-                }
+    pub fn insert_after(&mut self, element: T) {
+        let back: *mut NNMut<T> = &mut self.ll.back;
+        self.insert(
+            element,
+            |node_ptr| &mut unsafe { (*node_ptr).prev },
+            |node_ptr| &mut unsafe { (*node_ptr).next },
+            back,
+        )
+    }
 
-                Some(cur_ptr)
-            }
-        };
-        debug_assert!(self.ll.front.is_some());
-        debug_assert!(self.ll.back.is_some());
-        debug_assert!(self.ptr.is_some());
+    pub fn insert_before(&mut self, element: T) {
+        let front: *mut NNMut<T> = &mut self.ll.front;
+        self.insert(
+            element,
+            |node_ptr| &mut unsafe { (*node_ptr).next },
+            |node_ptr| &mut unsafe { (*node_ptr).prev },
+            front,
+        )
     }
 }
 
