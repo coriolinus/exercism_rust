@@ -200,7 +200,6 @@ fn cursor_take() {
 // may pass for incorrect programs if double frees happen
 // exactly as often as destructor leaks
 #[test]
-#[ignore]
 fn drop_no_double_frees() {
     use std::cell::Cell;
     #[derive(Debug)]
