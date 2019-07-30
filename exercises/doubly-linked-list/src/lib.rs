@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 type NNMut<T> = Option<NonNull<Node<T>>>;
 
 #[derive(Debug)]
-struct Node<T: fmt::Debug> {
+struct Node<T> {
     item: T,
 
     // the pointers below are const because we expect it to be relatively rare
@@ -21,7 +21,7 @@ struct Node<T: fmt::Debug> {
     prev: NNMut<T>,
 }
 
-impl<T: fmt::Debug> Node<T> {
+impl<T> Node<T> {
     fn new(item: T) -> Node<T> {
         Node {
             item,
@@ -43,13 +43,13 @@ impl<T: fmt::Debug> Node<T> {
 }
 
 #[derive(Debug)]
-pub struct LinkedList<T: fmt::Debug> {
+pub struct LinkedList<T> {
     // these pointers are mut because we expect them to change relatively frequently
     front: NNMut<T>,
     back: NNMut<T>,
 }
 
-impl<T: fmt::Debug> LinkedList<T> {
+impl<T> LinkedList<T> {
     pub fn new() -> Self {
         LinkedList {
             front: None,
@@ -77,7 +77,7 @@ impl<T: fmt::Debug> LinkedList<T> {
     }
 }
 
-impl<T: fmt::Debug + fmt::Display> fmt::Display for LinkedList<T> {
+impl<T: fmt::Display> fmt::Display for LinkedList<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let mut first = true;
         write!(f, "[")?;
@@ -93,22 +93,33 @@ impl<T: fmt::Debug + fmt::Display> fmt::Display for LinkedList<T> {
     }
 }
 
-impl<T: fmt::Debug> Drop for LinkedList<T> {
+impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
         // basically the same as in the stdlib implementation of drop
         while let Some(_) = self.pop_front() {}
     }
 }
 
+// Send is safe: just moving the list between threads breaks no invariants;
+// the pointers are still all valid.
+unsafe impl<T> Send for LinkedList<T> {}
+
+// I'm _pretty sure_ Sync is safe: in the event of a mutable ref, only the ref
+// can mutate the struct via the provided API, which is safe. In the event of
+// many immutable refs, none of them mutate it anyway, which is safe.
+//
+// I do wish I were more confident of this, though.
+unsafe impl<T> Sync for LinkedList<T> {}
+
 #[derive(Debug)]
-pub struct Cursor<'a, T: fmt::Debug> {
+pub struct Cursor<'a, T> {
     ll: &'a mut LinkedList<T>,
     ptr: NNMut<T>,
 }
 
 // the cursor is expected to act as if it is at the position of an element
 // and it also has to work with and be able to insert into an empty list.
-impl<T: fmt::Debug> Cursor<'_, T> {
+impl<T> Cursor<'_, T> {
     fn new(ll: &mut LinkedList<T>, ptr: NNMut<T>) -> Cursor<T> {
         Cursor { ll, ptr }
     }
@@ -247,18 +258,18 @@ impl<T: fmt::Debug> Cursor<'_, T> {
     }
 }
 
-impl<T: fmt::Debug + fmt::Display> fmt::Display for Cursor<'_, T> {
+impl<T: fmt::Display> fmt::Display for Cursor<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         self.ll.fmt(f)
     }
 }
 
-pub struct Iter<'a, T: fmt::Debug> {
+pub struct Iter<'a, T> {
     lifetime: std::marker::PhantomData<&'a T>,
     ptr: NNMut<T>,
 }
 
-impl<'a, T: fmt::Debug> Iter<'a, T> {
+impl<'a, T> Iter<'a, T> {
     fn new(_: &'a LinkedList<T>, ptr: NNMut<T>) -> Iter<'a, T> {
         Iter {
             lifetime: std::marker::PhantomData,
@@ -267,7 +278,7 @@ impl<'a, T: fmt::Debug> Iter<'a, T> {
     }
 }
 
-impl<'a, T: fmt::Debug> Iterator for Iter<'a, T> {
+impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {

@@ -230,7 +230,6 @@ fn drop_no_double_frees() {
 
 #[cfg(feature = "advanced")]
 #[test]
-#[ignore]
 fn advanced_linked_list_is_send_sync() {
     trait AssertSend: Send {}
     trait AssertSync: Sync {}
@@ -242,7 +241,6 @@ fn advanced_linked_list_is_send_sync() {
 #[cfg(feature = "advanced")]
 #[allow(dead_code)]
 #[test]
-#[ignore]
 fn advanced_is_covariant() {
     fn a<'a>(x: LinkedList<&'static str>) -> LinkedList<&'a str> {
         x
