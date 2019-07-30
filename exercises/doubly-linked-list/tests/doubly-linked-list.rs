@@ -97,7 +97,6 @@ fn iter() {
 // ———————————————————————————————————————————————————————————
 
 #[test]
-#[ignore]
 fn cursor_insert_before_on_empty_list() {
     // insert_after on empty list is already tested via push_back()
     let mut list = LinkedList::new();
@@ -106,7 +105,6 @@ fn cursor_insert_before_on_empty_list() {
 }
 
 #[test]
-#[ignore]
 fn cursor_insert_after_in_middle() {
     let mut list = (0..10).collect::<LinkedList<_>>();
 
@@ -128,7 +126,6 @@ fn cursor_insert_after_in_middle() {
 }
 
 #[test]
-#[ignore]
 fn cursor_insert_before_in_middle() {
     let mut list = (0..10).collect::<LinkedList<_>>();
 
@@ -151,7 +148,6 @@ fn cursor_insert_before_in_middle() {
 
 // "iterates" via next() and checks that it visits the right elements
 #[test]
-#[ignore]
 fn cursor_next_and_peek() {
     let mut list = (0..10).collect::<LinkedList<_>>();
     let mut cursor = list.cursor_front();
@@ -167,7 +163,6 @@ fn cursor_next_and_peek() {
 
 // "iterates" via prev() and checks that it visits the right elements
 #[test]
-#[ignore]
 fn cursor_prev_and_peek() {
     let mut list = (0..10).collect::<LinkedList<_>>();
     let mut cursor = list.cursor_back();
@@ -183,7 +178,6 @@ fn cursor_prev_and_peek() {
 
 // removes all elements starting from the middle
 #[test]
-#[ignore]
 fn cursor_take() {
     let mut list = (0..10).collect::<LinkedList<_>>();
     let mut cursor = list.cursor_front();

@@ -3,12 +3,12 @@
 // You are free to use anything in it, but it's mainly for the test framework.
 mod pre_implemented;
 
+use std::fmt;
 use std::ptr::NonNull;
-
 type NNMut<T> = Option<NonNull<Node<T>>>;
 
 #[derive(Debug)]
-struct Node<T: std::fmt::Debug> {
+struct Node<T: fmt::Debug> {
     item: T,
 
     // the pointers below are const because we expect it to be relatively rare
@@ -21,7 +21,7 @@ struct Node<T: std::fmt::Debug> {
     prev: NNMut<T>,
 }
 
-impl<T: std::fmt::Debug> Node<T> {
+impl<T: fmt::Debug> Node<T> {
     fn new(item: T) -> Node<T> {
         Node {
             item,
@@ -43,13 +43,13 @@ impl<T: std::fmt::Debug> Node<T> {
 }
 
 #[derive(Debug)]
-pub struct LinkedList<T: std::fmt::Debug> {
+pub struct LinkedList<T: fmt::Debug> {
     // these pointers are mut because we expect them to change relatively frequently
     front: NNMut<T>,
     back: NNMut<T>,
 }
 
-impl<T: std::fmt::Debug> LinkedList<T> {
+impl<T: fmt::Debug> LinkedList<T> {
     pub fn new() -> Self {
         LinkedList {
             front: None,
@@ -77,7 +77,23 @@ impl<T: std::fmt::Debug> LinkedList<T> {
     }
 }
 
-impl<T: std::fmt::Debug> Drop for LinkedList<T> {
+impl<T: fmt::Debug + fmt::Display> fmt::Display for LinkedList<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let mut first = true;
+        write!(f, "[")?;
+        for item in self.iter() {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", item)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl<T: fmt::Debug> Drop for LinkedList<T> {
     fn drop(&mut self) {
         // basically the same as in the stdlib implementation of drop
         while let Some(_) = self.pop_front() {}
@@ -85,14 +101,14 @@ impl<T: std::fmt::Debug> Drop for LinkedList<T> {
 }
 
 #[derive(Debug)]
-pub struct Cursor<'a, T: std::fmt::Debug> {
+pub struct Cursor<'a, T: fmt::Debug> {
     ll: &'a mut LinkedList<T>,
     ptr: NNMut<T>,
 }
 
 // the cursor is expected to act as if it is at the position of an element
 // and it also has to work with and be able to insert into an empty list.
-impl<T: std::fmt::Debug> Cursor<'_, T> {
+impl<T: fmt::Debug> Cursor<'_, T> {
     fn new(ll: &mut LinkedList<T>, ptr: NNMut<T>) -> Cursor<T> {
         Cursor { ll, ptr }
     }
@@ -121,7 +137,11 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
     /// Move one position backward (towards the front) and
     /// return a reference to the new position
     pub fn prev(&mut self) -> Option<&mut T> {
-        unimplemented!()
+        self.ptr = match self.ptr {
+            None => None,
+            Some(raw_ptr) => unsafe { (*raw_ptr.as_ptr()).prev },
+        };
+        self.peek_mut()
     }
 
     /// Remove and return the element at the current position and move the cursor
@@ -171,13 +191,17 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
             }
             Some(cur_ptr) => {
                 unsafe {
-                    (*new_node_ptr.unwrap().as_ptr()).prev = Some(cur_ptr);
                     let cur_node = cur_ptr.as_ptr();
+                    // update both node pointers
+                    (*new_node_ptr.unwrap().as_ptr()).prev = Some(cur_ptr);
+                    (*new_node_ptr.unwrap().as_ptr()).next = (*cur_node).next;
+                    // update external pointers
                     if let Some(next) = (*cur_node).next {
                         (*next.as_ptr()).prev = new_node_ptr;
                     } else {
                         self.ll.back = new_node_ptr;
                     }
+                    // update self pointer
                     (*cur_node).next = new_node_ptr;
                 }
 
@@ -200,13 +224,17 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
             }
             Some(cur_ptr) => {
                 unsafe {
-                    (*new_node_ptr.unwrap().as_ptr()).next = Some(cur_ptr);
                     let cur_node = cur_ptr.as_ptr();
+                    // update both node pointers
+                    (*new_node_ptr.unwrap().as_ptr()).next = Some(cur_ptr);
+                    (*new_node_ptr.unwrap().as_ptr()).prev = (*cur_node).prev;
+                    // update external pointers
                     if let Some(prev) = (*cur_node).prev {
                         (*prev.as_ptr()).next = new_node_ptr;
                     } else {
                         self.ll.front = new_node_ptr;
                     }
+                    // update self pointer
                     (*cur_node).prev = new_node_ptr;
                 }
 
@@ -219,12 +247,18 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
     }
 }
 
-pub struct Iter<'a, T: std::fmt::Debug> {
+impl<T: fmt::Debug + fmt::Display> fmt::Display for Cursor<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        self.ll.fmt(f)
+    }
+}
+
+pub struct Iter<'a, T: fmt::Debug> {
     lifetime: std::marker::PhantomData<&'a T>,
     ptr: NNMut<T>,
 }
 
-impl<'a, T: std::fmt::Debug> Iter<'a, T> {
+impl<'a, T: fmt::Debug> Iter<'a, T> {
     fn new(_: &'a LinkedList<T>, ptr: NNMut<T>) -> Iter<'a, T> {
         Iter {
             lifetime: std::marker::PhantomData,
@@ -233,7 +267,7 @@ impl<'a, T: std::fmt::Debug> Iter<'a, T> {
     }
 }
 
-impl<'a, T: std::fmt::Debug> Iterator for Iter<'a, T> {
+impl<'a, T: fmt::Debug> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
