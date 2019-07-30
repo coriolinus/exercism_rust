@@ -72,8 +72,8 @@ impl<T: std::fmt::Debug> LinkedList<T> {
     }
 
     /// Return an iterator that moves from front to back
-    pub fn iter(&self) -> Iter<'_, T> {
-        unimplemented!()
+    pub fn iter(&self) -> Iter<T> {
+        Iter::new(self, self.front)
     }
 }
 
@@ -191,6 +191,7 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
 
     pub fn insert_before(&mut self, element: T) {
         let new_node_ptr = unsafe { Node::new(element).into_ptr() };
+        debug_assert!(new_node_ptr.is_some());
         self.ptr = match self.ptr {
             None => {
                 self.ll.front = new_node_ptr;
@@ -212,15 +213,36 @@ impl<T: std::fmt::Debug> Cursor<'_, T> {
                 Some(cur_ptr)
             }
         };
+        debug_assert!(self.ll.front.is_some());
+        debug_assert!(self.ll.back.is_some());
+        debug_assert!(self.ptr.is_some());
     }
 }
 
-pub struct Iter<'a, T: std::fmt::Debug>(Cursor<'a, T>);
+pub struct Iter<'a, T: std::fmt::Debug> {
+    lifetime: std::marker::PhantomData<&'a T>,
+    ptr: NNMut<T>,
+}
+
+impl<'a, T: std::fmt::Debug> Iter<'a, T> {
+    fn new(_: &'a LinkedList<T>, ptr: NNMut<T>) -> Iter<'a, T> {
+        Iter {
+            lifetime: std::marker::PhantomData,
+            ptr,
+        }
+    }
+}
 
 impl<'a, T: std::fmt::Debug> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        unimplemented!()
+        let mut rv = None;
+        if let Some(ptr) = self.ptr {
+            let t = Box::leak(unsafe { Box::from_raw(ptr.as_ptr()) });
+            rv = Some(&t.item);
+            self.ptr = t.next;
+        }
+        rv
     }
 }
